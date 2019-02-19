@@ -1,3 +1,4 @@
 .links line {
   stroke: #aaa;
+  pointer-events: none;
 }
