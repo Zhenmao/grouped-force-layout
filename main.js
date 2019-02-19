@@ -5,6 +5,7 @@
 
   let nodeMap, groupMap;
   let originalLinks;
+  let data;
   let nodes, links, hulls;
   const collapse = {}; // Track collapse status of each group
 
@@ -30,7 +31,7 @@
 
   function r(d) {
     if (d.isGroupNode) {
-      return 5 + Math.sqrt(d.size);
+      return 10 + Math.sqrt(d.size);
     } else {
       return 5;
     }
@@ -108,7 +109,7 @@
             const y = nodes[0].y;
             if (collapse[group]) {
               // The group is now collapsed
-              nodesCentroid[nodes[0].id] = { x: x, y: y };
+              nodesCentroid[group] = { x: x, y: y };
             } else {
               // The group is now expanded
               groupMap.get(group).nodes.forEach(node => {
@@ -121,7 +122,7 @@
               // The group is now collapsed
               const x = d3.mean(nodes, d => d.x);
               const y = d3.mean(nodes, d => d.y);
-              nodesCentroid[nodes[0].id] = { x: x, y: y };
+              nodesCentroid[group] = { x: x, y: y };
             } else {
               // The group is now expanded
               nodes.forEach(node => {
@@ -190,7 +191,7 @@
   function updateChart() {
     simulation.stop();
 
-    const data = generateNetworkData();
+    data = generateNetworkData(data);
 
     nodes = data.nodes;
     links = data.links;
