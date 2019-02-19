@@ -3,13 +3,32 @@
   const width = +svg.attr("width");
   const height = +svg.attr("height");
 
+  const color = d3
+    .scaleOrdinal()
+    .range([
+      "#5F4690",
+      "#1D6996",
+      "#38A6A5",
+      "#0F8554",
+      "#73AF48",
+      "#EDAD08",
+      "#E17C05",
+      "#CC503E",
+      "#94346E",
+      "#6F4070",
+      "#994E95",
+      "#666666"
+    ]);
+
   const simulation = d3
     .forceSimulation()
-    .force("linK", d3.forceLink().id(d => d.id))
+    .force("link", d3.forceLink().id(d => d.id))
     .force("charge", d3.forceManyBody())
     .force("center", d3.forceCenter(width / 2, height / 2));
 
   d3.json("miserables.json").then(graph => {
+    color.domain(d3.set(graph.nodes, d => d.group).values());
+
     const link = svg
       .append("g")
       .attr("class", "links")
@@ -25,7 +44,8 @@
       .data(graph.nodes)
       .enter()
       .append("circle")
-      .attr("r", 2.5)
+      .attr("r", 5)
+      .attr("fill", d => color(d.group))
       .call(
         d3
           .drag()
@@ -36,7 +56,7 @@
 
     simulation.nodes(graph.nodes).on("tick", ticked);
 
-    simulation.force("link").links(garph.links);
+    simulation.force("link").links(graph.links);
 
     function ticked() {
       link
