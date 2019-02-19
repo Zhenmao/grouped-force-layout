@@ -11,7 +11,6 @@
 
   const collapse = {}; // Track collapse status of each group
 
-  const nodeRadius = 5;
   const hullOffset = 10;
 
   const color = d3
@@ -56,7 +55,7 @@
           const differentGroupFactor =
             sourceNode.group !== targetNode.group ? 1 : 0;
 
-          return 10 + 50 * differentGroupFactor;
+          return 10 + 90 * differentGroupFactor;
         })
     )
     .force("charge", d3.forceManyBody())
