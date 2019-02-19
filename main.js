@@ -7,6 +7,8 @@
   let originalLinks;
   let data;
   let nodes, links, hulls;
+  let node, link, hull;
+
   const collapse = {}; // Track collapse status of each group
 
   const nodeRadius = 5;
@@ -41,20 +43,36 @@
 
   const simulation = d3
     .forceSimulation()
-    .force("link", d3.forceLink().id(d => d.id))
-    // .linkDistance((link, i) => {
-    //   const sourceNode = link.source;
-    //   const targetNode = link.target;
+    .force(
+      "link",
+      d3
+        .forceLink()
+        .id(d => d.id)
+        .distance(link => {
+          const sourceNode = link.source;
+          const targetNode = link.target;
 
-    // }))
+          // Increase distance if source and target nodes are from different groups
+          const differentGroupFactor =
+            sourceNode.group !== targetNode.group ? 1 : 0;
+
+          return 10 + 50 * differentGroupFactor;
+        })
+    )
     .force("charge", d3.forceManyBody())
-    .force("center", d3.forceCenter(width / 2, height / 2));
+    .force("center", d3.forceCenter())
+    .on("tick", ticked);
+  simulation.stop();
 
-  const gHull = svg.append("g").attr("class", "hulls");
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${width / 2},${height / 2})`);
 
-  const gLink = svg.append("g").attr("class", "links");
+  const gHull = g.append("g").attr("class", "hulls");
 
-  const gNode = svg.append("g").attr("class", "nodes");
+  const gLink = g.append("g").attr("class", "links");
+
+  const gNode = g.append("g").attr("class", "nodes");
 
   function processData(graph) {
     graph.nodes.forEach(d => {
@@ -86,10 +104,6 @@
       const targetNode = nodeMap.get(link.target);
       link.sourceGroup = sourceNode.group;
       link.targetGroup = targetNode.group;
-      if (link.sourceGroup !== link.targetGroup) {
-        groupMap.get(link.sourceGroup).outerLinkCount++;
-        groupMap.get(link.targetGroup).outerLinkCount++;
-      }
     });
 
     originalLinks = graph.links;
@@ -112,7 +126,7 @@
               nodesCentroid[group] = { x: x, y: y };
             } else {
               // The group is now expanded
-              groupMap.get(group).nodes.forEach(node => {
+              nodes[0].nodes.forEach(node => {
                 nodesCentroid[node.id] = { x: x, y: y };
               });
             }
@@ -139,29 +153,25 @@
       if (collapse[id]) {
         // The group is now collapsed
         // Push a groupNode for this group
-        let x = width / 2;
-        let y = height / 2;
+        let x = 0;
+        let y = 0;
         if (nodesCentroid[id]) {
           x = nodesCentroid[id].x;
           y = nodesCentroid[id].y;
         }
-        d.x = x;
-        d.y = y;
-        nodes[id] = d;
+        nodes[id] = Object.assign({}, d, { x: x, y: y });
       } else {
         // The group is now expanded
         // Push individual nodes for this group
         d.nodes.forEach(node => {
-          let x = width / 2;
-          let y = height / 2;
+          let x = 0;
+          let y = 0;
           const id = node.id;
           if (nodesCentroid[id]) {
             x = nodesCentroid[id].x;
             y = nodesCentroid[id].y;
           }
-          node.x = x;
-          node.y = y;
-          nodes[id] = node;
+          nodes[id] = Object.assign({}, node, { x: x, y: y });
         });
       }
     });
@@ -170,11 +180,11 @@
     const links = {};
     originalLinks.forEach(oLink => {
       const source = collapse[oLink.sourceGroup]
-        ? groupMap.get(oLink.sourceGroup)
-        : nodeMap.get(oLink.source);
+        ? nodes[oLink.sourceGroup]
+        : nodes[oLink.source];
       const target = collapse[oLink.targetGroup]
-        ? groupMap.get(oLink.targetGroup)
-        : nodeMap.get(oLink.target);
+        ? nodes[oLink.targetGroup]
+        : nodes[oLink.target];
       const id =
         source.id < target.id
           ? `${source.id}-${target.id}`
@@ -196,7 +206,7 @@
     nodes = data.nodes;
     links = data.links;
 
-    const hulls = d3
+    hulls = d3
       .nest()
       .key(d => d.group)
       .entries(nodes.filter(d => !d.isGroupNode))
@@ -206,7 +216,7 @@
         points: generateHullPoints(d.values)
       }));
 
-    let hull = gHull.selectAll(".hull").data(hulls, d => d.group);
+    hull = gHull.selectAll(".hull").data(hulls, d => d.group);
 
     hull.exit().remove();
 
@@ -223,7 +233,7 @@
       })
       .merge(hull);
 
-    let link = gLink.selectAll(".link").data(links, d => d.id);
+    link = gLink.selectAll(".link").data(links, d => d.id);
 
     link.exit().remove();
 
@@ -231,9 +241,14 @@
       .enter()
       .append("line")
       .attr("class", "link")
+      .attr("stroke-width", d => d.size)
+      .attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y)
       .merge(link);
 
-    let node = gNode.selectAll(".node").data(nodes, d => d.id);
+    node = gNode.selectAll(".node").data(nodes, d => d.id);
 
     node.exit().remove();
 
@@ -260,25 +275,25 @@
       })
       .merge(node);
 
-    simulation.nodes(nodes).on("tick", ticked);
+    simulation.nodes(nodes);
     simulation.force("link").links(links);
     simulation.alpha(0.7).restart();
+  }
 
-    function ticked() {
-      hulls.forEach(d => {
-        d.points = generateHullPoints(d.nodes);
-      });
+  function ticked() {
+    hulls.forEach(d => {
+      d.points = generateHullPoints(d.nodes);
+    });
 
-      hull.attr("d", d => curve(d.points));
+    hull.attr("d", d => curve(d.points));
 
-      link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
+    link
+      .attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y);
 
-      node.attr("cx", d => d.x).attr("cy", d => d.y);
-    }
+    node.attr("cx", d => d.x).attr("cy", d => d.y);
   }
 
   d3.json("miserables.json").then(graph => {
