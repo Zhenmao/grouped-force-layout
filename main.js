@@ -28,6 +28,14 @@
       "#666666"
     ]);
 
+  function r(d) {
+    if (d.isGroupNode) {
+      return 5 + Math.sqrt(d.size);
+    } else {
+      return 5;
+    }
+  }
+
   const curve = d3.line().curve(d3.curveCardinalClosed.tension(0.5));
 
   const simulation = d3
@@ -40,6 +48,12 @@
     // }))
     .force("charge", d3.forceManyBody())
     .force("center", d3.forceCenter(width / 2, height / 2));
+
+  const gHull = svg.append("g").attr("class", "hulls");
+
+  const gLink = svg.append("g").attr("class", "links");
+
+  const gNode = svg.append("g").attr("class", "nodes");
 
   function processData(graph) {
     graph.nodes.forEach(d => {
@@ -164,7 +178,8 @@
           ? `${source.id}-${target.id}`
           : `${target.id}-${source.id}`;
       const link =
-        links[id] || (links[id] = { source: source, target: target, size: 0 });
+        links[id] ||
+        (links[id] = { id: id, source: source, target: target, size: 0 });
       link.size++;
     });
 
@@ -182,52 +197,69 @@
     const hulls = d3
       .nest()
       .key(d => d.group)
-      .entries(nodes)
+      .entries(nodes.filter(d => !d.isGroupNode))
       .map(d => ({
         group: d.key,
         nodes: d.values,
-        points: null
+        points: generateHullPoints(d.values)
       }));
 
-    const hull = svg
-      .append("g")
-      .attr("class", "hulls")
-      .selectAll("path")
-      .data(hulls)
+    let hull = gHull.selectAll(".hull").data(hulls, d => d.group);
+
+    hull = hull
       .enter()
       .append("path")
+      .attr("class", "hull")
       .attr("fill-opacity", 0.1)
-      .attr("fill", d => color(d.group));
+      .attr("fill", d => color(d.group))
+      .attr("d", d => curve(d.points))
+      .on("click", d => {
+        collapse[d.group] = true;
+        updateChart();
+      })
+      .merge(hull);
 
-    const link = svg
-      .append("g")
-      .attr("class", "links")
-      .selectAll("line")
-      .data(links)
+    hull.exit().remove();
+
+    let link = gLink.selectAll(".link").data(links, d => d.id);
+
+    link = link
       .enter()
-      .append("line");
+      .append("line")
+      .attr("class", "link")
+      .merge(link);
 
-    const node = svg
-      .append("g")
-      .attr("class", "nodes")
-      .selectAll("circle")
-      .data(nodes)
+    link.exit().remove();
+
+    let node = gNode.selectAll(".node").data(nodes, d => d.id);
+
+    node = node
       .enter()
       .append("circle")
-      .attr("r", 5)
+      .attr("class", "node")
+      .attr("r", r)
       .attr("fill", d => color(d.group))
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
       .call(
         d3
           .drag()
           .on("start", dragstarted)
           .on("drag", dragged)
           .on("end", dragended)
-      );
+      )
+      .on("click", d => {
+        if (d.isGroupNode) {
+          collapse[d.id] = false;
+          updateChart();
+        }
+      })
+      .merge(node);
+
+    node.exit().remove();
 
     simulation.nodes(nodes).on("tick", ticked);
-
     simulation.force("link").links(links);
-
     simulation.alpha(0.7).restart();
 
     function ticked() {
