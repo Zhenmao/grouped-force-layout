@@ -71,6 +71,7 @@
         .entries(graph.nodes)
         .map(d => ({
           id: d.key,
+          group: d.key,
           nodes: d.values,
           outerLinkCount: 0,
           size: d.values.length,
@@ -206,6 +207,8 @@
 
     let hull = gHull.selectAll(".hull").data(hulls, d => d.group);
 
+    hull.exit().remove();
+
     hull = hull
       .enter()
       .append("path")
@@ -219,9 +222,9 @@
       })
       .merge(hull);
 
-    hull.exit().remove();
-
     let link = gLink.selectAll(".link").data(links, d => d.id);
+
+    link.exit().remove();
 
     link = link
       .enter()
@@ -229,9 +232,9 @@
       .attr("class", "link")
       .merge(link);
 
-    link.exit().remove();
-
     let node = gNode.selectAll(".node").data(nodes, d => d.id);
+
+    node.exit().remove();
 
     node = node
       .enter()
@@ -255,8 +258,6 @@
         }
       })
       .merge(node);
-
-    node.exit().remove();
 
     simulation.nodes(nodes).on("tick", ticked);
     simulation.force("link").links(links);
