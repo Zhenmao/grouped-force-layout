@@ -1,3 +1,18 @@
+body {
+  font-family: "Raleway", sans-serif;
+}
+
+h1 {
+  font-family: "Playfair Display", serif;
+}
+
+.container {
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .links line {
   stroke: #aaa;
   pointer-events: none;

@@ -5,11 +5,22 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Grouped Force Layout</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Playfair+Display:700|Raleway"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
     <script src="https://d3js.org/d3.v5.min.js"></script>
   </head>
   <body>
-    <svg width="960" height="600"></svg>
+    <div class="container">
+      <h1>Grouped Force Directed Graph</h1>
+      <p>
+        Click a group enclosing polygon to collapse the group. Click the group
+        node to expand the nodes in that group.
+      </p>
+      <svg width="960" height="600"></svg>
+    </div>
     <script src="main.js"></script>
   </body>
 </html>
