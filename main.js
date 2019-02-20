@@ -55,7 +55,7 @@
           const differentGroupFactor =
             sourceNode.group !== targetNode.group ? 1 : 0;
 
-          return 20 + 120 * differentGroupFactor;
+          return 15 + 100 * differentGroupFactor;
         })
     )
     .force("charge", d3.forceManyBody())
